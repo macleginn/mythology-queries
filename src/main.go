@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"sort"
@@ -11,26 +12,43 @@ import (
 )
 
 // The program consists of an a http server that listens on port ...
-// and accepts requests of the following four kinds:
+// and accepts requests of the following kinds:
 // (1) .../motifQuery&code=...&num=...
 // (2) .../traditionQuery&code=...&num=...
-// (3) .../fetchMotifDict
-// (4) .../fetchTraditionDict
+// (3) .../fetchTraditionDict
+// (4) .../fetchMotifDistr&code=...
+// (5) .../fetchMotifList
 // To queries of the type (1) or (2) the server returns N=num motifs
 // closest in the spatial distribution to the given motif or N=num
 // traditions closest in the inventory of motifs to the given tradition
 // formatted as JSON:
-// {
-// 	"motif/tradition-code": int,
-// 	"closest-motifs/traditions": [
-// 		motif/tradition-code-1,
-// 		motif/tradition-code-2,
-// 		...
-// 	]
-// }
-// fetchTraditionDict and fetchMotifDict return the description
-// of motifs and traditions necessary for placing the them on the map
-// displaying the results.
+// [
+//   {
+//     "code": "Nyangi",
+//     "distance": "2"
+//   },
+//   {
+//     "code": "Turkana, Toposa",
+//     "distance": "6"
+//   }
+// ]
+// (for traditions) or:
+// [
+//   {
+//     "code": "b24a_7",
+//     "distance": "1"
+//   },
+//   {
+//     "code": "i28a_3",
+//     "distance": "3"
+//   }
+// ]
+// (for motifs).
+// fetchTraditionDict returns the description of traditions necessary
+// for placing the them on the map and displaying the results.
+// fetchMotifDistr returns the vector of traditions having the motif
+// for showing its distribution on the map.
+// fetchMotifList returns a list of motifs in the database.
 
 // The basic distance function used by both query handlers.
 func manhattan(v1 []int, v2 []int) (int, error) {
@@ -82,6 +100,13 @@ func (n neighbours) Swap(i, j int) { n[i], n[j] = n[j], n[i] }
 
 func (n neighbours) Less(i, j int) bool {
 	return n[i].distance < n[j].distance
+}
+
+// Tradition struct for unmarshalling json and serving motif distributions
+type Tradition struct {
+	Name      string
+	Latitude  float64
+	Longitude float64
 }
 
 // The workhorse function.
@@ -150,7 +175,8 @@ func (q *queryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	w.Write(dataJSON)
 }
 
-// Closure for fetching descriptions of motifs and traditions.
+// Generic closure for fetching json data; used only once here,
+// but may be useful later
 func createJSONServer(data []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -165,69 +191,113 @@ func errorHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// Prepare and deliver traditionDict
-	// TODO
-	traditionDict := map[string]string{
-		"1": "English",
-		"2": "Sinai Bedouins",
-		"3": "French",
-	}
-	traditionDictJSON, err := json.MarshalIndent(traditionDict, "", "  ")
+	// Prepare tradition data for handling traditionQueries
+	traditionsRaw, err := ioutil.ReadFile("../data/traditions.json")
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.HandleFunc("/fetchTraditionDict", createJSONServer(traditionDictJSON))
-
-	// Prepare and deliver motifDict
-	// TODO
-	motifDict := map[string]string{
-		"a1":   "Killing the sun",
-		"b13":  "Dying for love",
-		"l109": "An ogre is vindicated",
-	}
-	motifDictJSON, err := json.MarshalIndent(motifDict, "", "  ")
+	traditionDict := make(map[string][]int)
+	err = json.Unmarshal(traditionsRaw, &traditionDict)
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.HandleFunc("/fetchMotifDict", createJSONServer(motifDictJSON))
 
-	// Initialise data for motifHandler
-	// TODO
-	motifRepresentations := map[string][]int{
-		"a1":   []int{1, 0, 1, 1},
-		"b13":  []int{1, 1, 0, 0},
-		"l109": []int{1, 1, 1, 1},
+	// Prepare motif data for handling fetchMotifDistr queries
+	motifsRaw, err := ioutil.ReadFile("../data/motif_distributions.json")
+	if err != nil {
+		log.Fatal(err)
 	}
+	motifDict := make(map[string][]int)
+	err = json.Unmarshal(motifsRaw, &motifDict)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Prepare motif representations for motifQueries
+	motifVectorsRaw, err := ioutil.ReadFile("../data/motif_vectors.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	motifVectors := make(map[string][]int)
+	err = json.Unmarshal(motifVectorsRaw, &motifVectors)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Prepare and serve the motif list
+	motifList := []string{}
+	for key, _ := range motifDict {
+		motifList = append(motifList, key)
+	}
+	motifData, err := json.Marshal(motifList)
+	if err != nil {
+		log.Fatal(err)
+	}
+	http.HandleFunc("/fetchMotifList", createJSONServer(motifData))
+
+	// Serve the tradition info straight from the file
+	http.HandleFunc("/fetchTraditionDict", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "../data/coords.json")
+	})
+
+	// Prepare and serve motif distributions
+	traditions := []Tradition{}
+	traditionListRaw, err := ioutil.ReadFile("../data/coords.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = json.Unmarshal(traditionListRaw, &traditions)
+	if err != nil {
+		log.Fatal(err)
+	}
+	http.HandleFunc("/fetchMotifDistr", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		code, ok := query["code"]
+		// Check that a code is present and that there is only of them.
+		if !ok || len(code) != 1 {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		if _, ok = motifDict[code[0]]; !ok {
+			http.Error(w, "Wrong motif code", http.StatusNotFound)
+			return
+		}
+		traditionsForMotif := []Tradition{}
+		for idx, val := range motifDict[code[0]] {
+			if val == 1 {
+				traditionsForMotif = append(traditionsForMotif, traditions[idx])
+			}
+		}
+		distributionData, err := json.Marshal(traditionsForMotif)
+		if err != nil {
+			log.Fatal(err)
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write(distributionData)
+	})
 
 	// Initialise motifHandler with the data and register it with the server
 	motifHandler := queryHandler{}
-	motifHandler.distance = initialiseComparator(motifRepresentations)
+	motifHandler.distance = initialiseComparator(motifVectors)
 	motifHandler.items = make(map[string]bool)
-	for key, _ := range motifRepresentations {
+	for key, _ := range motifVectors {
 		motifHandler.items[key] = true
 	}
-
 	http.HandleFunc("/motifQuery", motifHandler.handleQuery)
-
-	// Initialise data for traditionHandler
-	// TODO
-	traditionRepresentations := map[string][]int{
-		"1": []int{1, 1, 1},
-		"2": []int{0, 1, 0},
-		"3": []int{1, 0, 1},
-	}
 
 	// Initialise traditionHandler with the data and register it with the server
 	traditionHandler := queryHandler{}
-	traditionHandler.distance = initialiseComparator(traditionRepresentations)
+	traditionHandler.distance = initialiseComparator(traditionDict)
 	traditionHandler.items = make(map[string]bool)
-	for key, _ := range traditionRepresentations {
+	for key, _ := range traditionDict {
 		traditionHandler.items[key] = true
 	}
-
 	http.HandleFunc("/traditionQuery", traditionHandler.handleQuery)
 
 	// Requests for all other paths are bad by definition
 	http.HandleFunc("/", errorHandler)
+
+	// Get to work
 	http.ListenAndServe(":8080", nil)
 }
