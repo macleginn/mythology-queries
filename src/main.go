@@ -13,11 +13,12 @@ import (
 
 // The program consists of an a http server that listens on port ...
 // and accepts requests of the following kinds:
-// (1) .../motifQuery&code=...&num=...
-// (2) .../traditionQuery&code=...&num=...
+// (1) .../motifQuery?code=...&num=...
+// (2) .../traditionQuery?code=...&num=...
 // (3) .../fetchTraditionDict
-// (4) .../fetchMotifDistr&code=...
+// (4) .../fetchMotifDistr?code=...
 // (5) .../fetchMotifList
+// (6) .../compareTraditions?trad1=...&trad2=...
 // To queries of the type (1) or (2) the server returns N=num motifs
 // closest in the spatial distribution to the given motif or N=num
 // traditions closest in the inventory of motifs to the given tradition
@@ -49,6 +50,10 @@ import (
 // fetchMotifDistr returns the vector of traditions having the motif
 // for showing its distribution on the map.
 // fetchMotifList returns a list of motifs in the database.
+// compareTraditions returns three lists:
+// * a list of motifs common to both traditions
+// * a list of motifs present only in the first tradition
+// * a list of motifs present only in the second tradition
 
 // The basic distance function used by both query handlers.
 func manhattan(v1 []int, v2 []int) (int, error) {
@@ -224,16 +229,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Prepare and serve the motif list
+	// Prepare and serve the motif list; the list will be used later
+	// for comparing traditions
 	motifList := []string{}
-	for key, _ := range motifDict {
-		motifList = append(motifList, key)
-	}
-	motifData, err := json.Marshal(motifList)
+	motifListBytes, err := ioutil.ReadFile("../data/motif_list.json")
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.HandleFunc("/fetchMotifList", createJSONServer(motifData))
+	http.HandleFunc("/fetchMotifList", createJSONServer(motifListBytes))
+	err = json.Unmarshal(motifListBytes, &motifList)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Serve the tradition info straight from the file
 	http.HandleFunc("/fetchTraditionDict", func(w http.ResponseWriter, r *http.Request) {
@@ -294,6 +301,44 @@ func main() {
 		traditionHandler.items[key] = true
 	}
 	http.HandleFunc("/traditionQuery", traditionHandler.handleQuery)
+
+	// Initialise the tradition comparison handler
+	http.HandleFunc("/compareTraditions", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		trad1, ok1 := query["trad1"]
+		trad2, ok2 := query["trad2"]
+		if !ok1 || !ok2 {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		trad1vec, ok1 := traditionDict[trad1[0]]
+		trad2vec, ok2 := traditionDict[trad2[0]]
+		if !ok1 || !ok2 {
+			http.Error(w, "Wrong motif code", http.StatusNotFound)
+			return
+		}
+		result := map[string][]string{
+			"common": []string{},
+			trad1[0]: []string{},
+			trad2[0]: []string{},
+		}
+		for idx, val := range trad1vec {
+			if val == 1 && trad2vec[idx] == 1 {
+				result["common"] = append(result["common"], motifList[idx])
+			} else if val == 1 {
+				result[trad1[0]] = append(result[trad1[0]], motifList[idx])
+			} else if trad2vec[idx] == 1 {
+				result[trad2[0]] = append(result[trad2[0]], motifList[idx])
+			}
+		}
+		resultData, err := json.Marshal(result)
+		if err != nil {
+			log.Fatal(err)
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write(resultData)
+	})
 
 	// Requests for all other paths are bad by definition
 	http.HandleFunc("/", errorHandler)
