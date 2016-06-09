@@ -139,6 +139,7 @@ func (q *queryHandler) getNNearestNeighbours(item string, n int) neighbours {
 }
 
 func (q *queryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	query := r.URL.Query()
 	code, ok := query["code"]
 	// Check that a code is present and that there is only of them.
@@ -155,7 +156,7 @@ func (q *queryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	// TODO: come up with a reasonable default number of items to return.
 	ntrads := -1
 	var err error
-	if n, ok := query["n"]; ok && len(n) == 1 {
+	if n, ok := query["num"]; ok && len(n) == 1 {
 		ntrads, err = strconv.Atoi(n[0])
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -184,6 +185,7 @@ func (q *queryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 // but may be useful later
 func createJSONServer(data []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write(data)
@@ -191,6 +193,7 @@ func createJSONServer(data []byte) func(w http.ResponseWriter, r *http.Request) 
 }
 
 func errorHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusBadRequest)
 	fmt.Fprintf(w, "Bad request: %s", r.URL.Path[1:])
 }
@@ -244,6 +247,7 @@ func main() {
 
 	// Serve the tradition info straight from the file
 	http.HandleFunc("/fetchTraditionDict", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		http.ServeFile(w, r, "../data/coords.json")
 	})
 
@@ -258,6 +262,7 @@ func main() {
 		log.Fatal(err)
 	}
 	http.HandleFunc("/fetchMotifDistr", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		query := r.URL.Query()
 		code, ok := query["code"]
 		// Check that a code is present and that there is only of them.
@@ -304,6 +309,7 @@ func main() {
 
 	// Initialise the tradition comparison handler
 	http.HandleFunc("/compareTraditions", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		query := r.URL.Query()
 		trad1, ok1 := query["trad1"]
 		trad2, ok2 := query["trad2"]
