@@ -72,6 +72,28 @@ func manhattan(v1 []int, v2 []int) (int, error) {
 	return distance, nil
 }
 
+// Returns number of elements that are equal (set to 1) in both vectors
+// as well number of elements set to 1 in the first vector, but not in
+// the second one and vice versa.
+func quantifiedSymmetricDifference(v1 []int, v2 []int) (int, int, int, error) {
+	if len(v1) != len(v2) {
+		return -1, -1, -1, errors.New("The vectors must be of the same length")
+	}
+	common := 0
+	v1only := 0
+	v2only := 0
+	for i := range v1 {
+		if v1[i]+v2[i] == 2 {
+			common++
+		} else if v1[i] == 1 {
+			v1only++
+		} else if v2[i] == 1 {
+			v2only++
+		}
+	}
+	return common, v1only, v2only, nil
+}
+
 // The same type of handler is used both for motif and tradition
 // queries since they do the same thing: compute Manhattan
 // distances between a given item and all other items in the collection.
@@ -79,22 +101,24 @@ func manhattan(v1 []int, v2 []int) (int, error) {
 // initialise the distance comparator.
 type queryHandler struct {
 	items    map[string]bool
-	distance func(mCode1, mCode2 string) (int, error)
+	distance func(mCode1, mCode2 string) (int, int, int, error)
 }
 
 // Initialise comparator with a closure.
-func initialiseComparator(representations map[string][]int) func(item1, item2 string) (int, error) {
-	return func(item1, item2 string) (int, error) {
+func initialiseComparator(representations map[string][]int) func(item1, item2 string) (int, int, int, error) {
+	return func(item1, item2 string) (int, int, int, error) {
 		v1 := representations[item1]
 		v2 := representations[item2]
-		return manhattan(v1, v2)
+		return quantifiedSymmetricDifference(v1, v2)
 	}
 }
 
 // A type satisfying sort.Interface for returning n closest motifs/traditions.
 type neighbour struct {
-	code     string
-	distance int
+	code       string
+	thisOnly   int
+	targetOnly int
+	common     int
 }
 
 type neighbours []neighbour
@@ -104,7 +128,7 @@ func (n neighbours) Len() int { return len(n) }
 func (n neighbours) Swap(i, j int) { n[i], n[j] = n[j], n[i] }
 
 func (n neighbours) Less(i, j int) bool {
-	return n[i].distance < n[j].distance
+	return n[i].common > n[j].common
 }
 
 // Tradition struct for unmarshalling json and serving motif distributions
@@ -121,13 +145,15 @@ func (q *queryHandler) getNNearestNeighbours(item string, n int) neighbours {
 		if storageItem == item {
 			continue
 		}
-		distance, err := q.distance(item, storageItem)
+		common, thisOnly, targetOnly, err := q.distance(item, storageItem)
 		if err != nil {
 			log.Fatal(err)
 		}
 		allNeighbours = append(allNeighbours, neighbour{
 			storageItem,
-			distance,
+			thisOnly,
+			targetOnly,
+			common,
 		})
 	}
 	sort.Sort(allNeighbours)
@@ -166,8 +192,10 @@ func (q *queryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	data := make([]map[string]string, 0)
 	for _, val := range q.getNNearestNeighbours(code[0], ntrads) {
 		data = append(data, map[string]string{
-			"code":     val.code,
-			"distance": strconv.Itoa(val.distance)})
+			"code":       val.code,
+			"thisOnly":   strconv.Itoa(val.thisOnly),
+			"targetOnly": strconv.Itoa(val.targetOnly),
+			"common":     strconv.Itoa(val.common)})
 	}
 	dataJSON, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {

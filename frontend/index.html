@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <title>Mythological queries</title>
   <script src="js/angular.min.js" type="text/javascript" charset="utf-8"></script>
+  <link rel="stylesheet" type="text/css" href="css/main.css">
 </head>
 <body ng-app="queryApp">
 <div class="main" ng-controller="MainController" ng-init="init()">
@@ -14,9 +15,14 @@
     <option value="" disabled>-- Select # --</option>
   </select>
   <button type="button" ng-click="sendTraditionQuery()">Send query</button>
-  <div class="report" ng-hide="hideuntildata"
+  <div class="report" ng-hide="hideuntildata">
     <div class="collapsible" ng-repeat="nt in neighTrads">
-      {{ nt.code }}, {{ nt.distance }}
+      <b>{{ nt.code }}</b>
+      <ul>
+        <li>Common: {{ nt.common }}</li>
+        <li>{{ ::selectedTradition.Name }} only: {{ nt.thisOnly }}</li>
+        <li>{{ nt.code }} only: {{ nt.targetOnly }}</li>
+      </ul>
     </div>
   </div>
 </div>
