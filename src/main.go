@@ -56,9 +56,9 @@ import (
 // * a list of motifs present only in the second tradition
 
 // The basic distance function used by both query handlers.
-func manhattan(v1 []int, v2 []int) (int, error) {
+func manhattan(v1 []int, v2 []int) (float64, error) {
 	if len(v1) != len(v2) {
-		return -1, errors.New("The vectors must be of the same length")
+		return -1.0, errors.New("Vectors must be of the same length")
 	}
 	distance := 0
 	for i := range v1 {
@@ -69,56 +69,21 @@ func manhattan(v1 []int, v2 []int) (int, error) {
 			distance += diff
 		}
 	}
-	return distance, nil
-}
-
-// Returns number of elements that are equal (set to 1) in both vectors
-// as well number of elements set to 1 in the first vector, but not in
-// the second one and vice versa.
-func quantifiedSymmetricDifference(v1 []int, v2 []int) (int, int, int, error) {
-	if len(v1) != len(v2) {
-		return -1, -1, -1, errors.New("The vectors must be of the same length")
-	}
-	common := 0
-	v1only := 0
-	v2only := 0
-	for i := range v1 {
-		if v1[i]+v2[i] == 2 {
-			common++
-		} else if v1[i] == 1 {
-			v1only++
-		} else if v2[i] == 1 {
-			v2only++
-		}
-	}
-	return common, v1only, v2only, nil
+	return float64(distance), nil
 }
 
 // The same type of handler is used both for motif and tradition
-// queries since they do the same thing: compute Manhattan
+// queries since they do the same thing: compute a bunch of
 // distances between a given item and all other items in the collection.
-// The difference lies in the representation that is used to
-// initialise the distance comparator.
 type queryHandler struct {
 	items    map[string]bool
-	distance func(mCode1, mCode2 string) (int, int, int, error)
-}
-
-// Initialise comparator with a closure.
-func initialiseComparator(representations map[string][]int) func(item1, item2 string) (int, int, int, error) {
-	return func(item1, item2 string) (int, int, int, error) {
-		v1 := representations[item1]
-		v2 := representations[item2]
-		return quantifiedSymmetricDifference(v1, v2)
-	}
+	distance func(mCode1, mCode2 string) (float64, error)
 }
 
 // A type satisfying sort.Interface for returning n closest motifs/traditions.
 type neighbour struct {
-	code       string
-	thisOnly   int
-	targetOnly int
-	common     int
+	code     string
+	distance float64
 }
 
 type neighbours []neighbour
@@ -128,7 +93,7 @@ func (n neighbours) Len() int { return len(n) }
 func (n neighbours) Swap(i, j int) { n[i], n[j] = n[j], n[i] }
 
 func (n neighbours) Less(i, j int) bool {
-	return n[i].common > n[j].common
+	return n[i].distance < n[j].distance
 }
 
 // Tradition struct for unmarshalling json and serving motif distributions
@@ -145,15 +110,13 @@ func (q *queryHandler) getNNearestNeighbours(item string, n int) neighbours {
 		if storageItem == item {
 			continue
 		}
-		common, thisOnly, targetOnly, err := q.distance(item, storageItem)
+		distance, err := q.distance(item, storageItem)
 		if err != nil {
 			log.Fatal(err)
 		}
 		allNeighbours = append(allNeighbours, neighbour{
 			storageItem,
-			thisOnly,
-			targetOnly,
-			common,
+			distance,
 		})
 	}
 	sort.Sort(allNeighbours)
@@ -177,9 +140,6 @@ func (q *queryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Wrong motif/tradition code", http.StatusNotFound)
 		return
 	}
-	// Check if a number of requested items is present and set the number to -1
-	// if it is not or if there are several.
-	// TODO: come up with a reasonable default number of items to return.
 	ntrads := -1
 	var err error
 	if n, ok := query["num"]; ok && len(n) == 1 {
@@ -189,13 +149,15 @@ func (q *queryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if ntrads == -1 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+	}
 	data := make([]map[string]string, 0)
 	for _, val := range q.getNNearestNeighbours(code[0], ntrads) {
 		data = append(data, map[string]string{
-			"code":       val.code,
-			"thisOnly":   strconv.Itoa(val.thisOnly),
-			"targetOnly": strconv.Itoa(val.targetOnly),
-			"common":     strconv.Itoa(val.common)})
+			"code":     val.code,
+			"distance": strconv.FormatFloat(val.distance, 'f', 5, 64),
+		})
 	}
 	dataJSON, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
@@ -259,6 +221,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	motifWeights := make(map[string]float64)
+	for key, vector := range motifVectors {
+		sum := 0
+		for _, val := range vector {
+			sum += val
+		}
+		motifWeights[key] = 1.0 / float64(sum)
+	}
 
 	// Prepare and serve the motif list; the list will be used later
 	// for comparing traditions
@@ -319,7 +289,11 @@ func main() {
 
 	// Initialise motifHandler with the data and register it with the server
 	motifHandler := queryHandler{}
-	motifHandler.distance = initialiseComparator(motifVectors)
+	motifHandler.distance = func(code1, code2 string) (float64, error) {
+		v1 := motifVectors[code1]
+		v2 := motifVectors[code2]
+		return manhattan(v1, v2)
+	}
 	motifHandler.items = make(map[string]bool)
 	for key, _ := range motifVectors {
 		motifHandler.items[key] = true
@@ -328,7 +302,21 @@ func main() {
 
 	// Initialise traditionHandler with the data and register it with the server
 	traditionHandler := queryHandler{}
-	traditionHandler.distance = initialiseComparator(traditionDict)
+	traditionHandler.distance = func(code1, code2 string) (float64, error) {
+		v1 := traditionDict[code1]
+		v2 := traditionDict[code2]
+		if len(v1) != len(v2) {
+			return -1.0, errors.New("Vectors must be of the same length")
+		}
+		var similarity float64
+		similarity = 0
+		for idx, val := range v1 {
+			if val == 1 && val == v2[idx] {
+				similarity -= motifWeights[motifList[idx]]
+			}
+		}
+		return similarity, nil
+	}
 	traditionHandler.items = make(map[string]bool)
 	for key, _ := range traditionDict {
 		traditionHandler.items[key] = true
@@ -336,6 +324,7 @@ func main() {
 	http.HandleFunc("/traditionQuery", traditionHandler.handleQuery)
 
 	// Initialise the tradition comparison handler
+	// TODO: rewrite
 	http.HandleFunc("/compareTraditions", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		query := r.URL.Query()

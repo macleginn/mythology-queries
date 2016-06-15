@@ -1,29 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Mythological queries</title>
   <script src="js/angular.min.js" type="text/javascript" charset="utf-8"></script>
   <link rel="stylesheet" type="text/css" href="css/main.css">
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+  <!-- jQuery library -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+  <!-- Latest compiled JavaScript -->
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
 </head>
 <body ng-app="queryApp">
 <div class="main" ng-controller="MainController" ng-init="init()">
-  <select name="traditionlist" ng-change="toggleChange()" ng-hide="hidethis" ng-options="tradition.Name for tradition in queryresults" ng-model="selectedTradition">
+  <div class="container-fluid">
+  <div class="row">
+  <div class="col-xs-12">
+  <div class="page-header">
+  <h1>Tradition comparison engine</h1>
+</div>
+  </div>
+  <div class="col-sm-12">
+  <div class="input-group">
+    <select class="form-control" name="traditionlist" ng-change="toggleChange()" ng-hide="hidethis" ng-options="tradition.Name for tradition in queryresults" ng-model="selectedTradition">
     <option value="" disabled>-- Select a tradition --</option>
-  </select>
-  <select name="choiceofn" ng-hide="hidethis" ng-options="value for value in ns" ng-model="ntrads">
-    <option value="" disabled>-- Select # --</option>
-  </select>
+    </select>
+    <select class="form-control" name="choiceofn" ng-hide="hidethis" ng-options="value for value in ns" ng-model="ntrads">
+      <option value="" disabled>-- Select # --</option>
+    </select>
+  </div>
+  </div>
+  </div>
   <button type="button" ng-click="sendTraditionQuery()">Send query</button>
-  <div class="report" ng-hide="hideuntildata">
-    <div class="collapsible" ng-repeat="nt in neighTrads">
-      <b>{{ nt.code }}</b>
-      <ul>
-        <li>Common: {{ nt.common }}</li>
-        <li>{{ ::selectedTradition.Name }} only: {{ nt.thisOnly }}</li>
-        <li>{{ nt.code }} only: {{ nt.targetOnly }}</li>
-      </ul>
+  <div class="row">
+    <div class="col-sm-5 report">
+      <div class="collapsible" ng-repeat="nt in neighTrads">
+        <b>{{ nt.code }}</b>, distance (neg. similarity): {{ nt.distance }}, <a ng-click="compareWith(nt.code)">compare</a>
+      </div>
     </div>
+    <div class="col-sm-6" id="comparisonDiv" ng-hide="hideuntilcompare">
+      <p><strong>Common motifs:</strong> {{ traditionComparisonData["common"] | formatList }}</p>
+      <p><strong>{{ selectedTradition["Name"] }} only:</strong> {{ traditionComparisonData[selectedTradition["Name"]] | formatList }}
+      <p><strong>{{ otherTradition }} only:</strong> {{ traditionComparisonData[otherTradition] | formatList }}
+    </div>
+  </div>
   </div>
 </div>
 
