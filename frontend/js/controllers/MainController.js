@@ -11,7 +11,7 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 	};
 	// TODO: replace with text input with autocomplete options
 	$scope.fetchData = function() {
-		$http.get('http://localhost:8080/fetchTraditionDict').then(function(response) {
+		$http.get('http://23.254.167.151:8080/fetchTraditionDict').then(function(response) {
 			$scope.selectedTradition = "Choose the tradition";
 			$scope.hideuntilcompare = true;
 			$scope.hidethis = false;
@@ -24,7 +24,7 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 		$scope.toggledbychange = $scope.selectedTradition.Name;
 	};
 	$scope.sendTraditionQuery = function() {
-		var urlstring = 'http://localhost:8080/traditionQuery?code=' + encodeURIComponent($scope.selectedTradition.Name) + '&num=' + $scope.ntrads;
+		var urlstring = 'http://23.254.167.151:8080/traditionQuery?code=' + encodeURIComponent($scope.selectedTradition.Name) + '&num=' + $scope.ntrads;
 		$http.get(urlstring).then(function(response) {
 			$scope.hideuntilcompare = true;
 			$scope.neighTrads = response.data;
@@ -34,7 +34,7 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 	};
 	$scope.compareWith = function(otherTradition) {
 		$scope.otherTradition = otherTradition;
-		var urlstring = 'http://localhost:8080/compareTraditions?trad1=' + encodeURIComponent($scope.selectedTradition.Name) + '&trad2=' + encodeURIComponent(otherTradition);
+		var urlstring = 'http://23.254.167.151:8080/compareTraditions?trad1=' + encodeURIComponent($scope.selectedTradition.Name) + '&trad2=' + encodeURIComponent(otherTradition);
 		$http.get(urlstring).then(function(response) {
 			$scope.hideuntilcompare = false;
 			$scope.traditionComparisonData = response.data;

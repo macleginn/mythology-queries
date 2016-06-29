@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Mythological queries</title>
+  <script type="text/javascript" src="http://maps.google.com/maps/api/js?key=AIzaSyCBGe-tLAd7dP12Oa3B4a_9Yj1otKFRvoQ"></script>
+  <script src="js/angular.min.js" type="text/javascript" charset="utf-8"></script>
+  <link rel="stylesheet" type="text/css" href="css/main.css">
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+  <!-- jQuery library -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+  <!-- Latest compiled JavaScript -->
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+</head>
+<body ng-app="queryApp">
+<div class="main" ng-controller="MainController" ng-init="init()">
+  <div class="container-fluid">
+  <div class="row">
+  <div class="col-xs-12">
+  <div class="page-header">
+  <h1>Motif comparison engine</h1>
+</div>
+  </div>
+  <div class="col-sm-12">
+  <div class="input-group">
+    <select class="form-control" name="motiflist" ng-change="showSelectedMotif()" ng-hide="hidethis" ng-options="motif for motif in queryresults" ng-model="selectedMotif">
+    <option value="" disabled>-- Select a motif --</option>
+    </select>
+    <select class="form-control" name="choiceofn" ng-hide="hidethis" ng-options="value for value in ns" ng-model="nmotifs">
+      <option value="" disabled>-- Select # --</option>
+    </select>
+  </div>
+  </div>
+  </div>
+  <button type="button" ng-click="sendMotifQuery()">Send query</button>
+  <div class="row">
+    <div class="col-sm-4 report" style="margin-right: 10px;">
+      <div class="collapsible" ng-repeat="m in neighMotifs">
+        <b>{{ m.code }}</b>, distance: {{ m.distance }}, <a ng-click="showOnTheMap(m.code)">show on the map</a>
+      </div>
+    </div>
+    <div class="col-sm-6">
+      <div id="map1Div" style="width: 600px; height: 375px; margin-bottom: 10px;" ng-hide="waitformap1">
+    </div>
+  </div>
+  </div>
+</div>
+
+<script src="js/app.js" type="text/javascript" charset="utf-8"></script>
+<script src="js/controllers/MotifController.js" type="text/javascript" charset="utf-8"></script>
+</body>
+</html>
