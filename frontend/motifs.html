@@ -35,13 +35,13 @@
   </div>
   <button type="button" ng-click="sendMotifQuery()">Send query</button>
   <div class="row">
-    <div class="col-sm-4 report" style="margin-right: 10px;">
+    <div class="col-sm-2 report" style="margin-right: 10px;">
       <div class="collapsible" ng-repeat="m in neighMotifs">
-        <b>{{ m.code }}</b>, distance: {{ m.distance }}, <a ng-click="showOnTheMap(m.code)">show on the map</a>
+        <b>{{ m.code }}</b>, distance: {{ m.distance | round }}, <a ng-click="showOnTheMap(m.code)">show on the map</a>
       </div>
     </div>
     <div class="col-sm-6">
-      <div id="map1Div" style="width: 600px; height: 375px; margin-bottom: 10px;" ng-hide="waitformap1">
+      <div id="map1Div" style="width: 800px; height: 500px; margin-bottom: 10px;" ng-hide="waitformap1">
     </div>
   </div>
   </div>
