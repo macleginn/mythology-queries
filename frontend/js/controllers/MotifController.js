@@ -13,7 +13,8 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 	};
 	// TODO: replace with text input with autocomplete options
 	$scope.fetchData = function() {
-		$http.get('http://23.254.167.151:8080/fetchMotifList').then(function(response) {
+		// $http.get('http://23.254.167.151:8080/fetchMotifList').then(function(response) {
+		$http.get('http://localhost:8080/fetchMotifList').then(function(response) {
 			$scope.selectedMotif = "Choose the motif";
 			$scope.hideuntilcompare = true;
 			$scope.hidethis = false;
@@ -28,7 +29,7 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 			styles = [{"featureType":"landscape","stylers":[{"saturation":-100},{"lightness":65},{"visibility":"on"}]},{"featureType":"poi","stylers":[{"saturation":-100},{"lightness":51},{"visibility":"simplified"}]},{"featureType":"road.highway","stylers":[{"saturation":-100},{"visibility":"simplified"}]},{"featureType":"road.arterial","stylers":[{"saturation":-100},{"lightness":30},{"visibility":"on"}]},{"featureType":"road.local","stylers":[{"saturation":-100},{"lightness":40},{"visibility":"on"}]},{"featureType":"transit","stylers":[{"saturation":-100},{"visibility":"simplified"}]},{"featureType":"administrative.province","stylers":[{"visibility":"off"}]},{"featureType":"water","elementType":"labels","stylers":[{"visibility":"on"},{"lightness":-25},{"saturation":-100}]},{"featureType":"water","elementType":"geometry","stylers":[{"hue":"#ffff00"},{"lightness":-25},{"saturation":-97}]}];
 			var center = new google.maps.LatLng(39.149908, 22.153219);
 			var mapOptions = {
-				zoom: 2,
+				zoom: 1,
 				center: center,
 				mapTypeId: google.maps.MapTypeId.TERRAIN
 			};
@@ -43,14 +44,23 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 				delete $scope.map1markers[tradName];
 			}
 		}
+		for (var tradName in $scope.markersCache) {
+			if ($scope.markersCache.hasOwnProperty(tradName)) {
+				$scope.markersCache[tradName].setMap(null);
+				delete $scope.markersCache[tradName];
+			}
+		}
+		// TODO: make a reserve copy
+		$scope.markersCache = {};
 		$scope.map1markers = {};
-		var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent($scope.selectedMotif);
+		// var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent($scope.selectedMotif);
+		var urlstring = 'http://localhost:8080/fetchMotifDistr?code=' + encodeURIComponent($scope.selectedMotif);
 		$http.get(urlstring).then(function(response) {
 			// console.log(response);
 			for (var i = 0; i < response.data.length; i++) {
 				var point = response.data[i];
 				var latLng = new google.maps.LatLng(point["Latitude"], point["Longitude"]);
-				$scope.map1markers[point["Name"]] = new google.maps.Marker({
+				var marker = new google.maps.Marker({
 					position: latLng,
 					map: $scope.map1,
 					title: point["Name"],
@@ -63,6 +73,8 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 						strokeColor: "black"
 					}
 				});
+				$scope.map1markers[point["Name"]] = marker;
+				$scope.markersCache[point["Name"]] = marker;
 			}
 		}, function(response) {
 			console.log("Data retrieval error");
@@ -70,7 +82,8 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 	};
 	$scope.sendMotifQuery = function() {
 		if (!($scope.nmotifs === undefined)) {
-			var urlstring = 'http://23.254.167.151:8080/motifQuery?code=' + encodeURIComponent($scope.selectedMotif) + '&num=' + $scope.nmotifs;
+			// var urlstring = 'http://23.254.167.151:8080/motifQuery?code=' + encodeURIComponent($scope.selectedMotif) + '&num=' + $scope.nmotifs;
+			var urlstring = 'http://localhost:8080/motifQuery?code=' + encodeURIComponent($scope.selectedMotif) + '&num=' + $scope.nmotifs;
 			$http.get(urlstring).then(function(response) {
 				$scope.hideuntilcompare = true;
 				$scope.neighMotifs = response.data;
@@ -80,7 +93,8 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 		}
 	};
 	$scope.showOnTheMap = function(code) {
-		var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent(code);
+		// var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent(code);
+		var urlstring = 'http://localhost:8080/fetchMotifDistr?code=' + encodeURIComponent(code);
 		$http.get(urlstring).then(function(response) {
 			// console.log(response);
 			var common = {};
@@ -88,18 +102,18 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 			var onlySecond = {};
 			for (var i = 0; i < response.data.length; i++) {
 				var point = response.data[i];
-				if ($scope.map1markers.hasOwnProperty(point["Name"])) {
+				if ($scope.markersCache.hasOwnProperty(point["Name"])) {
 					common[point["Name"]] = new google.maps.LatLng(point["Latitude"], point["Longitude"]);
 				} else {
 					onlySecond[point["Name"]] = new google.maps.LatLng(point["Latitude"], point["Longitude"]);
 				}
 			}
-			for (mcode in $scope.map1markers) {
-				if (!$scope.map1markers.hasOwnProperty(mcode)) {
+			for (mcode in $scope.markersCache) {
+				if (!$scope.markersCache.hasOwnProperty(mcode)) {
 					continue;
 				}
 				if (!common.hasOwnProperty(mcode)) {
-					onlyFirst[mcode] = $scope.map1markers[mcode]['position'];
+					onlyFirst[mcode] = $scope.markersCache[mcode]['position'];
 				}
 			}
 			console.clear();

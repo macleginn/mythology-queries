@@ -292,7 +292,23 @@ func main() {
 	motifHandler.distance = func(code1, code2 string) (float64, error) {
 		v1 := motifVectors[code1]
 		v2 := motifVectors[code2]
-		return manhattan(v1, v2)
+		if len(v1) != len(v2) {
+			return -1.0, errors.New("Vectors must be of the same length")
+		}
+		var distance float64
+		// Distance is in fact negative similarity and can
+		// be negative itself
+		distance = 0
+		for idx, val := range v1 {
+			if val == 0 && val == v2[idx] {
+				continue
+			} else if val == 1 && val == v2[idx] {
+				distance -= 1
+			} else {
+				distance += 1
+			}
+		}
+		return distance, nil
 	}
 	motifHandler.items = make(map[string]bool)
 	for key, _ := range motifVectors {
@@ -308,14 +324,15 @@ func main() {
 		if len(v1) != len(v2) {
 			return -1.0, errors.New("Vectors must be of the same length")
 		}
-		var similarity float64
-		similarity = 0
+		// Distance is defined as negative similarity
+		var distance float64
+		distance = 0
 		for idx, val := range v1 {
 			if val == 1 && val == v2[idx] {
-				similarity -= motifWeights[motifList[idx]]
+				distance -= motifWeights[motifList[idx]]
 			}
 		}
-		return similarity, nil
+		return distance, nil
 	}
 	traditionHandler.items = make(map[string]bool)
 	for key, _ := range traditionDict {
