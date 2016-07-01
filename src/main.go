@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 )
@@ -190,6 +191,10 @@ func errorHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	err := os.Chdir("/root/mythology-queries/bin")
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Prepare tradition data for handling traditionQueries
 	traditionsRaw, err := ioutil.ReadFile("../data/traditions.json")
 	if err != nil {
