@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -243,6 +244,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Read coords to a slice; use it for distance calculations
+	coords := []Tradition{}
+	coordsBytes, err := ioutil.ReadFile("../data/coords.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = json.Unmarshal(coordsBytes, &coords)
+
+	// TODO: serve from coords slice
 	// Serve the tradition info straight from the file
 	http.HandleFunc("/fetchTraditionDict", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -290,22 +300,47 @@ func main() {
 	// Initialise motifHandler with the data and register it with the server
 	motifHandler := queryHandler{}
 	motifHandler.distance = func(code1, code2 string) (float64, error) {
-		v1 := motifVectors[code1]
-		v2 := motifVectors[code2]
+		v1 := motifDict[code1]
+		v2 := motifDict[code2]
 		if len(v1) != len(v2) {
 			return -1.0, errors.New("Vectors must be of the same length")
 		}
 		var distance float64
-		// Distance is in fact negative similarity and can
-		// be negative itself
 		distance = 0
-		for idx, val := range v1 {
-			if val == 0 && val == v2[idx] {
+		for idx1, val1 := range v1 {
+			if val1 == 0 {
 				continue
-			} else if val == 1 && val == v2[idx] {
-				distance -= 1
-			} else {
-				distance += 1
+			}
+			minDist := math.Inf(1)
+			for idx2, val2 := range v2 {
+				if val2 == 0 {
+					continue
+				}
+				dist := math.Sqrt((coords[idx1].Latitude-coords[idx2].Latitude)*(coords[idx1].Latitude-coords[idx2].Latitude) + (coords[idx1].Longitude-coords[idx2].Longitude)*(coords[idx1].Longitude-coords[idx2].Longitude))
+				if dist < minDist {
+					minDist = dist
+				}
+			}
+			if minDist > distance {
+				distance = minDist
+			}
+		}
+		for idx1, val1 := range v2 {
+			if val1 == 0 {
+				continue
+			}
+			minDist := math.Inf(1)
+			for idx2, val2 := range v1 {
+				if val2 == 0 {
+					continue
+				}
+				dist := math.Sqrt((coords[idx1].Latitude-coords[idx2].Latitude)*(coords[idx1].Latitude-coords[idx2].Latitude) + (coords[idx1].Longitude-coords[idx2].Longitude)*(coords[idx1].Longitude-coords[idx2].Longitude))
+				if dist < minDist {
+					minDist = dist
+				}
+			}
+			if minDist > distance {
+				distance = minDist
 			}
 		}
 		return distance, nil
@@ -341,7 +376,6 @@ func main() {
 	http.HandleFunc("/traditionQuery", traditionHandler.handleQuery)
 
 	// Initialise the tradition comparison handler
-	// TODO: rewrite
 	http.HandleFunc("/compareTraditions", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		query := r.URL.Query()

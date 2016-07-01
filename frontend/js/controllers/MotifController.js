@@ -10,6 +10,7 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 		for (var i = 1; i <= 30; i++) {
 			$scope.ns.push(i);
 		}
+		$scope.secondMotif = "X";
 	};
 	// TODO: replace with text input with autocomplete options
 	$scope.fetchData = function() {
@@ -66,10 +67,10 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 					title: point["Name"],
 					icon: {
 						path: google.maps.SymbolPath.CIRCLE,
-						fillColor: "yellow",
+						fillColor: "blue",
 						fillOpacity: 1,
-						scale: 4,
-						strokeWeight: 1,
+						scale: 5,
+						strokeWeight: 0,
 						strokeColor: "black"
 					}
 				});
@@ -93,6 +94,7 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 		}
 	};
 	$scope.showOnTheMap = function(code) {
+		$scope.secondMotif = code;
 		// var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent(code);
 		var urlstring = 'http://localhost:8080/fetchMotifDistr?code=' + encodeURIComponent(code);
 		$http.get(urlstring).then(function(response) {
