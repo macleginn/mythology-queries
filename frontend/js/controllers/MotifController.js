@@ -14,8 +14,8 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 	};
 	// TODO: replace with text input with autocomplete options
 	$scope.fetchData = function() {
-		// $http.get('http://23.254.167.151:8080/fetchMotifList').then(function(response) {
-		$http.get('http://localhost:8080/fetchMotifList').then(function(response) {
+		$http.get('http://23.254.167.151:8080/fetchMotifList').then(function(response) {
+		// $http.get('http://localhost:8080/fetchMotifList').then(function(response) {
 			$scope.selectedMotif = "Choose the motif";
 			$scope.hideuntilcompare = true;
 			$scope.hidethis = false;
@@ -54,8 +54,8 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 		// TODO: make a reserve copy
 		$scope.markersCache = {};
 		$scope.map1markers = {};
-		// var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent($scope.selectedMotif);
-		var urlstring = 'http://localhost:8080/fetchMotifDistr?code=' + encodeURIComponent($scope.selectedMotif);
+		var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent($scope.selectedMotif);
+		// var urlstring = 'http://localhost:8080/fetchMotifDistr?code=' + encodeURIComponent($scope.selectedMotif);
 		$http.get(urlstring).then(function(response) {
 			// console.log(response);
 			for (var i = 0; i < response.data.length; i++) {
@@ -83,8 +83,8 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 	};
 	$scope.sendMotifQuery = function() {
 		if (!($scope.nmotifs === undefined)) {
-			// var urlstring = 'http://23.254.167.151:8080/motifQuery?code=' + encodeURIComponent($scope.selectedMotif) + '&num=' + $scope.nmotifs;
-			var urlstring = 'http://localhost:8080/motifQuery?code=' + encodeURIComponent($scope.selectedMotif) + '&num=' + $scope.nmotifs;
+			var urlstring = 'http://23.254.167.151:8080/motifQuery?code=' + encodeURIComponent($scope.selectedMotif) + '&num=' + $scope.nmotifs;
+			// var urlstring = 'http://localhost:8080/motifQuery?code=' + encodeURIComponent($scope.selectedMotif) + '&num=' + $scope.nmotifs;
 			$http.get(urlstring).then(function(response) {
 				$scope.hideuntilcompare = true;
 				$scope.neighMotifs = response.data;
@@ -95,8 +95,8 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 	};
 	$scope.showOnTheMap = function(code) {
 		$scope.secondMotif = code;
-		// var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent(code);
-		var urlstring = 'http://localhost:8080/fetchMotifDistr?code=' + encodeURIComponent(code);
+		var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent(code);
+		// var urlstring = 'http://localhost:8080/fetchMotifDistr?code=' + encodeURIComponent(code);
 		$http.get(urlstring).then(function(response) {
 			// console.log(response);
 			var common = {};
