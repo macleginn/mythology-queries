@@ -24,7 +24,7 @@
     </div>
     <div class="col-xs-3">
       <div class="input-group">
-      <select class="form-control" name="motiflist" ng-change="showSelectedMotif()" ng-hide="hidethis" ng-options="motif for motif in queryresults" ng-model="selectedMotif">
+      <select class="form-control" name="motiflist" ng-change="showSelectedMotif()" ng-hide="hidethis" ng-options="motif[0] + ' ' + motif[1] for motif in queryresults" ng-model="selectedMotif">
       <option value="" disabled>-- Select a motif --</option>
       </select>
       <select class="form-control" name="choiceofn" ng-hide="hidethis" ng-options="value for value in ns" ng-model="nmotifs">
@@ -42,11 +42,11 @@
   <div class="row" style="margin-top: 10px; margin-bottom: 15px;">
     <div class="col-sm-3 report" style="margin-right: 10px;">
       <div class="collapsible" ng-repeat="m in neighMotifs">
-        <b>{{ m.code }}</b><span ng-hide="waitforresponse">, distance: {{ m.distance | round }}, <a class="hand" ng-click="showOnTheMap(m.code)">show on the map</a></span>
+        <b>{{ m.code }}</b><span ng-hide="waitforresponse"> ({{ m.name }}), distance: {{ m.distance | round }}, <a class="hand" ng-click="showOnTheMap(m.code)">show on the map</a></span>
       </div>
     </div>
     <div class="col-sm-6">
-    <p>Legend: blue dots — <b>{{ selectedMotif }}</b> only; red dots — <b>{{ secondMotif }}</b> only; yellow dots — both motifs.</p>
+    <p>Legend: blue dots — <b>{{ selectedMotif[0] }}</b> only; red dots — <b>{{ secondMotif }}</b> only; yellow dots — both motifs.</p>
       <div id="map1Div" style="width: 800px; height: 380px; margin-bottom: 10px;">
     </div>
   </div>

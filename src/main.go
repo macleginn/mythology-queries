@@ -11,6 +11,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/golang/geo/s2"
 )
@@ -59,42 +60,18 @@ import (
 // * a list of motifs present only in the first tradition
 // * a list of motifs present only in the second tradition
 
-// The basic distance function used by both query handlers.
-func manhattan(v1 []int, v2 []int) (float64, error) {
-	if len(v1) != len(v2) {
-		return -1.0, errors.New("Vectors must be of the same length")
-	}
-	distance := 0
-	for i := range v1 {
-		diff := v1[i] - v2[i]
-		if diff < 0 {
-			distance += -diff
-		} else {
-			distance += diff
-		}
-	}
-	return float64(distance), nil
-}
-
-func hav(θ float64) float64 {
-	return (1 - math.Cos(θ)) / 2
-}
-
-func havDist(lat1, lon1, lat2, lon2 float64) float64 {
-	R := 6371.0
-	φ1 := lat1 * math.Pi / 180
-	φ2 := lat2 * math.Pi / 180
-	λ1 := lon1 * math.Pi / 180
-	λ2 := lon2 * math.Pi / 180
-	return 2 * R * math.Asin(math.Sqrt(hav(φ2-φ1)+math.Cos(φ1)*math.Cos(φ2)*hav(λ2-λ1)))
+type motif struct {
+	Name        string
+	Description string
 }
 
 // The same type of handler is used both for motif and tradition
 // queries since they do the same thing: compute a bunch of
 // distances between a given item and all other items in the collection.
 type queryHandler struct {
-	items    map[string]bool
-	distance func(mCode1, mCode2 string) (float64, error)
+	items        map[string]bool
+	distance     func(mCode1, mCode2 string) (float64, error)
+	descriptions map[string]motif
 }
 
 // A type satisfying sort.Interface for returning n closest motifs/traditions.
@@ -120,7 +97,6 @@ type Tradition struct {
 	Longitude float64
 }
 
-// The workhorse function.
 func (q *queryHandler) getNNearestNeighbours(item string, n int) neighbours {
 	allNeighbours := make(neighbours, 0)
 	for storageItem, _ := range q.items {
@@ -168,13 +144,25 @@ func (q *queryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	}
 	if ntrads == -1 {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
 	}
 	data := make([]map[string]string, 0)
 	for _, val := range q.getNNearestNeighbours(code[0], ntrads) {
-		data = append(data, map[string]string{
-			"code":     val.code,
-			"distance": strconv.FormatFloat(val.distance, 'f', 5, 64),
-		})
+		// If it is a motif query, supply names and descriptions
+		if r.URL.Path == "/motifQuery" {
+			key := strings.ToLower((strings.Split(val.code, "_"))[0])
+			data = append(data, map[string]string{
+				"code":        val.code,
+				"distance":    strconv.FormatFloat(val.distance, 'f', 5, 64),
+				"name":        q.descriptions[key].Name,
+				"description": q.descriptions[key].Description,
+			})
+		} else {
+			data = append(data, map[string]string{
+				"code":     val.code,
+				"distance": strconv.FormatFloat(val.distance, 'f', 5, 64),
+			})
+		}
 	}
 	dataJSON, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
@@ -253,8 +241,8 @@ func main() {
 
 	// Prepare and serve the motif list; the list will be used later
 	// for comparing traditions
-	motifList := []string{}
-	motifListBytes, err := ioutil.ReadFile("../data/motif_list.json")
+	motifList := [][]string{}
+	motifListBytes, err := ioutil.ReadFile("../data/new_motif_list.json")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -319,6 +307,16 @@ func main() {
 
 	// Initialise motifHandler with the data and register it with the server
 	motifHandler := queryHandler{}
+	descriptions := make(map[string]motif)
+	motifDescriptionsRaw, err := ioutil.ReadFile("../data/new_descriptions.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = json.Unmarshal(motifDescriptionsRaw, &descriptions)
+	if err != nil {
+		log.Fatal("Failed to unmarshal descriptions: ", err)
+	}
+	motifHandler.descriptions = descriptions
 	motifHandler.distance = func(code1, code2 string) (float64, error) {
 		v1 := motifDict[code1]
 		v2 := motifDict[code2]
@@ -329,7 +327,8 @@ func main() {
 		distance = 0
 		// Distance is defined as the maximum distance from a point in one of
 		// the vectors to the nearest point in the other one. It is computed
-		// separately for both vectors, but since we take the max it is symmetric.
+		// separately for both vectors, but since we take the overall max
+		// it is symmetric.
 		for idx1, val1 := range v1 {
 			if val1 == 0 {
 				continue
@@ -392,7 +391,7 @@ func main() {
 		distance = 0
 		for idx, val := range v1 {
 			if val == 1 && val == v2[idx] {
-				distance -= motifWeights[motifList[idx]]
+				distance -= motifWeights[motifList[idx][0]]
 			}
 		}
 		return distance, nil
@@ -426,11 +425,11 @@ func main() {
 		}
 		for idx, val := range trad1vec {
 			if val == 1 && trad2vec[idx] == 1 {
-				result["common"] = append(result["common"], motifList[idx])
+				result["common"] = append(result["common"], motifList[idx][0])
 			} else if val == 1 {
-				result[trad1[0]] = append(result[trad1[0]], motifList[idx])
+				result[trad1[0]] = append(result[trad1[0]], motifList[idx][0])
 			} else if trad2vec[idx] == 1 {
-				result[trad2[0]] = append(result[trad2[0]], motifList[idx])
+				result[trad2[0]] = append(result[trad2[0]], motifList[idx][0])
 			}
 		}
 		resultData, err := json.Marshal(result)
