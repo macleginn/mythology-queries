@@ -42,7 +42,7 @@
   <div class="row" style="margin-top: 10px; margin-bottom: 15px;">
     <div class="col-sm-3 report" style="margin-right: 10px;">
       <div class="collapsible" ng-repeat="m in neighMotifs">
-        <b>{{ m.code }}</b>, distance: {{ m.distance | round }}, <a class="hand" ng-click="showOnTheMap(m.code)">show on the map</a>
+        <b>{{ m.code }}</b><span ng-hide="waitforresponse">, distance: {{ m.distance | round }}, <a class="hand" ng-click="showOnTheMap(m.code)">show on the map</a></span>
       </div>
     </div>
     <div class="col-sm-6">

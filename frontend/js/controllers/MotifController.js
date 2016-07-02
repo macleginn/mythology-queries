@@ -5,6 +5,7 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 		$scope.map1initialised = false;
 		$scope.map1markers = [];
 		$scope.waitformap2 = true;
+		$scope.waitforresponse = true;
 		$scope.fetchData();
 		$scope.ns = [];
 		for (var i = 1; i <= 30; i++) {
@@ -80,11 +81,19 @@ app.controller('MainController', ['$scope', '$http', function($scope, $http) {
 	};
 	$scope.sendMotifQuery = function() {
 		if (!($scope.nmotifs === undefined)) {
+			$scope.neighMotifs = [
+			{
+				code: "Processing request...",
+				distance: "",
+
+			}];
+			$scope.waitforresponse = true;
 			var urlstring = 'http://23.254.167.151:8080/motifQuery?code=' + encodeURIComponent($scope.selectedMotif) + '&num=' + $scope.nmotifs;
 			// var urlstring = 'http://localhost:8080/motifQuery?code=' + encodeURIComponent($scope.selectedMotif) + '&num=' + $scope.nmotifs;
 			$http.get(urlstring).then(function(response) {
 				$scope.hideuntilcompare = true;
 				$scope.neighMotifs = response.data;
+				$scope.waitforresponse = false;
 			}, function(response) {
 				$scope.neighMotifs = "Data retrieval error";
 			});
