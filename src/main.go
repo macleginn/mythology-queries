@@ -327,16 +327,19 @@ func main() {
 		}
 		var distance float64
 		distance = 0
+		// Distance is defined as the maximum distance from a point in one of
+		// the vectors to the nearest point in the other one. It is computed
+		// separately for both vectors, but since we take the max it is symmetric.
 		for idx1, val1 := range v1 {
 			if val1 == 0 {
 				continue
 			}
 			minDist := math.Inf(1)
+			p1 := s2.LatLngFromDegrees(coords[idx1].Latitude, coords[idx1].Longitude)
 			for idx2, val2 := range v2 {
 				if val2 == 0 {
 					continue
 				}
-				p1 := s2.LatLngFromDegrees(coords[idx1].Latitude, coords[idx1].Longitude)
 				p2 := s2.LatLngFromDegrees(coords[idx2].Latitude, coords[idx2].Longitude)
 				dist := float64(p1.Distance(p2))
 				if dist < minDist {
@@ -347,16 +350,19 @@ func main() {
 				distance = minDist
 			}
 		}
+		// And now the other way around.
 		for idx1, val1 := range v2 {
 			if val1 == 0 {
 				continue
 			}
 			minDist := math.Inf(1)
+			p1 := s2.LatLngFromDegrees(coords[idx1].Latitude, coords[idx1].Longitude)
 			for idx2, val2 := range v1 {
 				if val2 == 0 {
 					continue
 				}
-				dist := math.Sqrt((coords[idx1].Latitude-coords[idx2].Latitude)*(coords[idx1].Latitude-coords[idx2].Latitude) + (coords[idx1].Longitude-coords[idx2].Longitude)*(coords[idx1].Longitude-coords[idx2].Longitude))
+				p2 := s2.LatLngFromDegrees(coords[idx2].Latitude, coords[idx2].Longitude)
+				dist := float64(p1.Distance(p2))
 				if dist < minDist {
 					minDist = dist
 				}
