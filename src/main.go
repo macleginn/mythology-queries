@@ -11,6 +11,8 @@ import (
 	"os"
 	"sort"
 	"strconv"
+
+	"github.com/golang/geo/s2"
 )
 
 // The program consists of an a http server that listens on port ...
@@ -334,7 +336,9 @@ func main() {
 				if val2 == 0 {
 					continue
 				}
-				dist := havDist(coords[idx1].Latitude, coords[idx1].Longitude, coords[idx2].Latitude, coords[idx2].Longitude)
+				p1 := s2.LatLngFromDegrees(coords[idx1].Latitude, coords[idx1].Longitude)
+				p2 := s2.LatLngFromDegrees(coords[idx2].Latitude, coords[idx2].Longitude)
+				dist := float64(p1.Distance(p2))
 				if dist < minDist {
 					minDist = dist
 				}
