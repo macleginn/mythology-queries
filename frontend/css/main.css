@@ -21,3 +21,7 @@
 .collapsible:last-child {
 	border: 0;
 }
+
+a.hand {
+	cursor: pointer;
+}

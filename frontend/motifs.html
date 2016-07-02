@@ -17,31 +17,35 @@
 <div class="main" ng-controller="MainController" ng-init="init()">
   <div class="container-fluid">
   <div class="row">
-  <div class="col-xs-12">
-  <div class="page-header">
-  <h1>Motif comparison engine</h1>
-</div>
+    <div class="col-xs-12">
+      <div class="page-header">
+      <h1>Motif comparison engine</h1>
+      </div>
+    </div>
+    <div class="col-xs-3">
+      <div class="input-group">
+      <select class="form-control" name="motiflist" ng-change="showSelectedMotif()" ng-hide="hidethis" ng-options="motif for motif in queryresults" ng-model="selectedMotif">
+      <option value="" disabled>-- Select a motif --</option>
+      </select>
+      <select class="form-control" name="choiceofn" ng-hide="hidethis" ng-options="value for value in ns" ng-model="nmotifs">
+        <option value="" disabled>-- Select # --</option>
+      </select>
+      <button type="button" ng-click="sendMotifQuery()">Send query</button>
+      <button type="button" ng-click="showSelectedMotif()" ng-disabled="waitformap1">Show selected motif only</button>  
+      </div>
+    </div>
+    <div class="col-xs-6">
+      <p>Select a motif from the list on the left. Its distribution will be shown on the map below. To see the motifs closest in their geographic distribution to the chosen one, select the number of neighbours (from 1 to 30) and press “Send query”. The distribution of each of the neighbours can be plotted on the map together with that of the base motif.</p>
+    </div>
   </div>
-  <div class="col-sm-12">
-  <div class="input-group">
-    <select class="form-control" name="motiflist" ng-change="showSelectedMotif()" ng-hide="hidethis" ng-options="motif for motif in queryresults" ng-model="selectedMotif">
-    <option value="" disabled>-- Select a motif --</option>
-    </select>
-    <select class="form-control" name="choiceofn" ng-hide="hidethis" ng-options="value for value in ns" ng-model="nmotifs">
-      <option value="" disabled>-- Select # --</option>
-    </select>
-  </div>
-  </div>
-  </div>
-  <button type="button" ng-click="sendMotifQuery()">Send query</button>
-  <button type="button" ng-click="showSelectedMotif()" ng-disabled="waitformap1">Show selected motif only</button>
+  
   <div class="row" style="margin-top: 10px; margin-bottom: 15px;">
     <div class="col-sm-3 report" style="margin-right: 10px;">
       <div class="collapsible" ng-repeat="m in neighMotifs">
-        <b>{{ m.code }}</b>, distance: {{ m.distance | round }}, <a ng-click="showOnTheMap(m.code)">show on the map</a>
+        <b>{{ m.code }}</b>, distance: {{ m.distance | round }}, <a class="hand" ng-click="showOnTheMap(m.code)">show on the map</a>
       </div>
     </div>
-    <div class="col-sm-6" ng-hide="waitformap1">
+    <div class="col-sm-6">
     <p>Legend: blue dots — <b>{{ selectedMotif }}</b> only; red dots — <b>{{ secondMotif }}</b> only; yellow dots — both motifs.</p>
       <div id="map1Div" style="width: 800px; height: 380px; margin-bottom: 10px;">
     </div>

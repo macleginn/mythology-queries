@@ -74,6 +74,19 @@ func manhattan(v1 []int, v2 []int) (float64, error) {
 	return float64(distance), nil
 }
 
+func hav(θ float64) float64 {
+	return (1 - math.Cos(θ)) / 2
+}
+
+func havDist(lat1, lon1, lat2, lon2 float64) float64 {
+	R := 6371.0
+	φ1 := lat1 * math.Pi / 180
+	φ2 := lat2 * math.Pi / 180
+	λ1 := lon1 * math.Pi / 180
+	λ2 := lon2 * math.Pi / 180
+	return 2 * R * math.Asin(math.Sqrt(hav(φ2-φ1)+math.Cos(φ1)*math.Cos(φ2)*hav(λ2-λ1)))
+}
+
 // The same type of handler is used both for motif and tradition
 // queries since they do the same thing: compute a bunch of
 // distances between a given item and all other items in the collection.
@@ -321,7 +334,7 @@ func main() {
 				if val2 == 0 {
 					continue
 				}
-				dist := math.Sqrt((coords[idx1].Latitude-coords[idx2].Latitude)*(coords[idx1].Latitude-coords[idx2].Latitude) + (coords[idx1].Longitude-coords[idx2].Longitude)*(coords[idx1].Longitude-coords[idx2].Longitude))
+				dist := havDist(coords[idx1].Latitude, coords[idx1].Longitude, coords[idx2].Latitude, coords[idx2].Longitude)
 				if dist < minDist {
 					minDist = dist
 				}
