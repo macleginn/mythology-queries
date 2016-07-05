@@ -21,7 +21,7 @@
 					mapTypeId: google.maps.MapTypeId.TERRAIN
 				};
 				$scope.myList = [];
-				var tempList = $scope.motifList.split(" ");
+				var tempList = $scope.motifList.trim().split(" ");
 				var numCalls = tempList.length;
 				// TODO: check for repeated items
 				for (var i = 0; i < tempList.length; i++) {
