@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Map drawing engine</title>
+	<script type="text/javascript" src="http://maps.google.com/maps/api/js?key=AIzaSyCBGe-tLAd7dP12Oa3B4a_9Yj1otKFRvoQ"></script>
+	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+	<script src="js/angular.min.js" type="text/javascript" charset="utf-8"></script>
+	<script>
+		var app = angular.module('mapDrawer', []);
+		app.controller('mapController', ['$scope', '$http', '$timeout', function($scope, $http, $timeout) {
+			$scope.init = function() {
+				$scope.myList = [];			
+			};
+			$scope.txt = 'hi';
+			$scope.drawMaps = function() {
+				var center = new google.maps.LatLng(39.149908, 22.153219);
+				var mapOptions = {
+					zoom: 1,
+					center: center,
+					mapTypeId: google.maps.MapTypeId.TERRAIN
+				};
+				$scope.myList = [];
+				var tempList = $scope.motifList.split(" ");
+				var numCalls = tempList.length;
+				// TODO: check for repeated items
+				for (var i = 0; i < tempList.length; i++) {
+					(function(i) {
+					var id = tempList[i];						
+					console.log(i, id);
+					var urlstring = 'http://23.254.167.151:8080/fetchMotifDistr?code=' + encodeURIComponent(id);
+					$http.get(urlstring).then(function(response) {
+						$scope.myList.push(id);
+						$timeout(function () {
+							var map = new google.maps.Map(document.getElementById(id), mapOptions);
+							for (var i = 0; i < response.data.length; i++) {
+								var point = response.data[i];
+								var latLng = new google.maps.LatLng(point["Latitude"], point["Longitude"]);
+								var marker = new google.maps.Marker({
+									position: latLng,
+									map: map,
+									title: point["Name"],
+									icon: {
+										path: google.maps.SymbolPath.CIRCLE,
+										fillColor: "blue",
+										fillOpacity: 1,
+										scale: 5,
+										strokeWeight: 0,
+										strokeColor: "black"
+									}
+								});
+							}
+						});
+					},
+					function(response) {
+						console.log("Data retrieval error");
+					});
+				})(i);
+				}
+			};
+		}]);		
+	</script>
+	<style type="text/css" media="screen">
+		.mapDiv {
+			/*background-color: red;*/
+			min-width: 500px;
+			min-height: 312px;
+			margin: 10px;
+			margin-left: 0;
+		}
+		body {
+			padding-left: 20px;
+			padding-bottom: 30px;
+		}
+	</style>
+	<script src="js/components/mapDiv.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body ng-app="mapDrawer">
+	<div class="container-fluid" ng-controller="mapController" ng-init="init();">
+		<div class="row">
+			<div class="col-xs-12">
+				<h1>Mass map drawer</h1>
+			</div>
+	    </div>
+		<div class="row" style="margin-bottom: 20px;">
+			<div class="col-xs-4">
+				<input type="text" name="motifList" ng-model="motifList" style="min-width: 400px;">
+				<br/>
+				<input type="button" name="Draw maps" value="Draw maps" ng-click="drawMaps()">
+			</div>			
+		</div>
+		<div class="row">
+		<div ng-repeat="val in myList" class="col-xs-5">
+			<map-div divid="{{ val }}"></map-div>
+		</div>
+		</div>
+	</div>
+</body>
+</html>
